@@ -28,6 +28,7 @@
     "eslint-plugin-promise": "^4.1.1",
     "eslint-plugin-standard": "^4.0.0",
     "html-webpack-plugin": "^3.2.0",
+    "jsdom": "^16.4.0",
     "mocha": "^6.2.3",
     "nodemon": "^1.18.10",
     "portfinder": "^1.0.20",
@@ -35,9 +36,5 @@
     "webpack": "^4.32.2",
     "webpack-cli": "^3.3.2",
     "webpack-dev-server": "^3.5.0"
-  },
-  "dependencies": {
-    "dat.gui": "^0.7.6",
-    "three": "^0.106.0"
   }
 }

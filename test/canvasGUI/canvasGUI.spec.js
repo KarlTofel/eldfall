@@ -39,7 +39,7 @@ describe('drawRectangle test', () => {
         const p2 = pixels(c2);
         // runs a loop that compares the values of pixel arrays
         const compare = p1.every((val, index) => val === p2[index]);
-        expect(compare).to.equal(true);
+        expect(compare).to.be.true;
     })
 })
 describe('drawRectangle test size', () => {
@@ -62,7 +62,7 @@ describe('drawRectangle test size', () => {
         const p1 = pixels(c1);
         const p2 = pixels(c2);
         const compare = p1.every((val, index) => val === p2[index]);
-        expect(compare).to.equal(true);
+        expect(compare).to.be.true;
     })
 })
 describe('drawRectangle test rotation', () => {
@@ -88,6 +88,6 @@ describe('drawRectangle test rotation', () => {
         const p1 = pixels(c1);
         const p2 = pixels(c2);
         const compare = p1.every((val, index) => val === p2[index]);
-        expect(compare).to.equal(true);
+        expect(compare).to.be.true;
     })
 })

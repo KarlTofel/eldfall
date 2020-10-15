@@ -40,42 +40,27 @@ function getAngle(x1, y1, x2, y2) {
     const x = x2 - x1;
     const y = y2 - y1;
     const positivity = {
-        x: x > 0,
-        y: y > 0
+        x: x >= 0,
+        y: y >= 0
     };
-    if (x1 == x2) {
-        if (y1 == y2) {
-            return null;
-        } else if (positivity.y) {
-            return 90;
-        } else {
-            return 270;
-        }
-    } else if (y1 == y2) {
-        if (positivity.x) {
-            return 0;
-        } else {
-            return 180;
-        }
+    if (x1 == x2 && y1 == y2) {
+        return 'overlapping';
     }
     const angle = getObserverToPointAngle(x2 - x1, y2 - y1);
+    console.log(angle);
     if (positivity.x) {
         if (positivity.y) {
-            return angle;
+            return angle + 0;
         } else {
-            return 270 + angle;
+            return angle + 360;
         }
     } else {
-        if (positivity.y) {
-            return angle + 90;
-        } else {
-            return angle + 180;
-        }
+        return angle + 180;
     }
 }
 function getObserverToPointAngle(adjecent, oposite) {
-    // sin a = adjecent / oposite
-    const angle = Math.atan(Math.abs(oposite) / Math.abs(adjecent)) * 180 / Math.PI;
+    // tan a = oposite / adjecent
+    const angle = Math.atan(oposite / adjecent) * 180 / Math.PI;
     return Math.floor(angle);
 }
 function withinCone(orientation, cone, angle) {
@@ -115,30 +100,45 @@ function makeValidAngle(angle) {
         return angle;
     }
 }
-function getTargetsEdges(inCone, centre, left, right) {
+function getTargetsEdges(inCone, centre, leftRight) {
     const insideCone = Number(inCone.centre) + Number(inCone.left) + Number(inCone.right);
-    const centreAngle = makeValidAngle(centre);
-    const leftAngle = makeValidAngle(left);
-    const rightAngle = makeValidAngle(right);
-    // console.log('centreAngle: ', centreAngle);
-    // console.log('leftAngle: ', leftAngle);
-    // console.log('rightAngle: ', rightAngle);
-    // console.log(insideCone);
-    if (insideCone == 3) {
-        return 100;
-    } else if (insideCone == 0) {
-        return 0;
-    } else {
-        return 50;
-    }
-    if (insideCone == 2) {
-        if (inCone.left) {
-        } else {
+    const centreAngle = makeValidAngle(centre) + 360;
+    const leftAngle = makeValidAngle(leftRight.left) + 360;
+    const rightAngle = makeValidAngle(leftRight.right) + 360;
+    const returned = (left, right) => {
+        return {
+            left: makeValidAngle(left),
+            right: makeValidAngle(right)
         }
+    }
+    if (insideCone == 3) {
+        return returned(leftAngle, rightAngle)
     } else {
-        if (inCone.centre) {
-        } else if (inCone.left) {
+        function getWidthInAngle(left, right) {
+            if (right > left) {
+                const st1 = right - 360;
+                return makeValidAngle(left - st1);
+            } else {
+                return makeValidAngle(left - right);
+            }
+        }
+        const width = getWidthInAngle(leftAngle, rightAngle);
+        console.log(leftAngle, rightAngle);
+        console.log(width);
+        // basicaly doing a binary search for the last point within cone of vision
+        if (insideCone == 1 && inCone.centre) {
+        }
+    }
+}
+function binaryAdjecent(angle, max, orientation, cone) {
+    if (max == 1) {
+        return angle;
+    } else {
+        const n = makeValidAngle(angle + max);
+        if (withinCone(orientation, cone, n)) {
+            return n;
         } else {
+            return makeValidAngle(n - max / 2);
         }
     }
 }
@@ -149,16 +149,19 @@ export default () => {
             const y1 = observer.position.y;
             const x2 = target.position.x;
             const y2 = target.position.y;
+            const angle = getAngle(x1, y1, x2, y2, observer.orientation);
+            if (angle == 'overlapping') {
+                return 100;
+            }
             const d = (Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))).toFixed(2);
-            const angle = getAngle(x1, y1, x2, y2);
             const sideAngles = getAngleOfTargetsEdges(angle, Number(d), target.size.width);
             const inCone = {
                 centre: withinCone(observer.orientation, observer.cone, angle).bool,
                 left: withinCone(observer.orientation, observer.cone, sideAngles.left).bool,
                 right: withinCone(observer.orientation, observer.cone, sideAngles.right).bool
             };
-            console.log(getObserverToPointAngle(x2 - x1, y2 - y1));
-            return getTargetsEdges(inCone, angle, sideAngles.left, sideAngles.right, observer.cone)
+            console.log(getTargetsEdges(inCone, angle, sideAngles));
+            return (Number(inCone.left) + Number(inCone.right)) * 50;
         }
     };
 }

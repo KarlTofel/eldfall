@@ -43,9 +43,9 @@ describe('hasVisual test 4', () => {
 });
 describe('hasVisual test 5', () => {
     it('observer should see 66 percent of the target', () => {
-        const observer = sights().observer(0, 0, 0);
+        const observer = sights().observer(0, 10, 10);
         // target is on the edge of two thirds in the periphery
-        const target = sights().target(1, 2, 0, 7);
+        const target = sights().target(3, 2, 10, 20);
         const obstacles = [];
         const result = sights().hasVisuals(observer, target, obstacles);
         console.log('result: ', result);

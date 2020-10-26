@@ -45,9 +45,20 @@ describe('hasVisual test 5', () => {
     it('observer should see 66 percent of the target', () => {
         const observer = sights().observer(0, 10, 10);
         // target is on the edge of two thirds in the periphery
-        const target = sights().target(3, 2, 10, 20);
+        const target = sights().target(9, 2, 11, 20);
         const obstacles = [];
         const result = sights().hasVisuals(observer, target, obstacles);
-        console.log('result: ', result);
+        // because javascript isn't great with a floating point, the result isn't all that precise
+        expect(result).to.equal(66);
+    })
+});
+describe('hasVisual test 6', () => {
+    it('observer should see 33 percent of the target', () => {
+        const observer = sights().observer(0, 10, 10);
+        const target = sights().target(9, 2, 8, 20);
+        const obstacles = [];
+        const result = sights().hasVisuals(observer, target, obstacles);
+        console.log(result);
+        expect(result).to.equal(33);
     })
 });

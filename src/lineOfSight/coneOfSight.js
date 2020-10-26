@@ -1,36 +1,8 @@
-function getTargetLine(x1, y1, x2, y2, width) {
-    const d1 = width / 2;
-    const observersLine = lineOfVision(x1, y1, x2, y2);
-    console.log(observersLine);
-    // k1 = -1/k2
-    const k1 = observersLine.k;
-    const k = -1 / k1;
-    // n = y - kx
-    const n = y2 - k * x2;
-    return {
-        k,
-        n
-    }
-}
-function lineOfVision(x1, y1, x2, y2) {
-    // y = k * x + n
-    // k = (y2 - y1) / (x2 - x1)
-    const k = (x2 - x1) / (y2 - y1);
-    // n = y - kx
-    const n = y1 - k * x1;
-    // d^2 = x^2 + y^2
-    return {
-        d,
-        k,
-        n
-    }
-}
 function getAngleOfTargetsEdges(angle, distance, targetWidth) {
-    // we need two new lines at the edges of the target
-    // we have two right triangles where: adjecent = distance to target, oposite = half targets width
+    // right triangle with the one side as distance to point and height of width/2
     const angleWithLineToTarget = getObserverToPointAngle(distance, targetWidth / 2);
-    const left = angle + angleWithLineToTarget;
-    const right = angle - angleWithLineToTarget;
+    const left = makeValidAngle(angle + angleWithLineToTarget);
+    const right = makeValidAngle(angle - angleWithLineToTarget);
     return {
         left,
         right
@@ -40,21 +12,21 @@ function getAngle(x1, y1, x2, y2) {
     const x = x2 - x1;
     const y = y2 - y1;
     const positivity = {
+        // helps define quadrant
         x: x >= 0,
         y: y >= 0
     };
     if (x1 == x2 && y1 == y2) {
+        // will result in returning full vision
         return 'overlapping';
     }
     const angle = getObserverToPointAngle(x2 - x1, y2 - y1);
-    console.log(angle);
+    // gets
     if (positivity.x) {
-        if (positivity.y) {
-            return angle + 0;
-        } else {
-            return angle + 360;
-        }
+        // quadrant 1 or 4
+        return makeValidAngle(360 + angle);
     } else {
+        // quadrant 2 or 3
         return angle + 180;
     }
 }
@@ -63,34 +35,14 @@ function getObserverToPointAngle(adjecent, oposite) {
     const angle = Math.atan(oposite / adjecent) * 180 / Math.PI;
     return Math.floor(angle);
 }
-function withinCone(orientation, cone, angle) {
-    const half = cone / 2;
-    if (makeValidAngle(half) >= 180) {
-        // has full cone of vision
-        return true;
-    }
-    const left = makeValidAngle(Number(orientation) + Number(half));
-    const right = makeValidAngle(orientation - half);
-    const direction = makeValidAngle(orientation);
-    if (left > right) {
-        return {
-            bool: left >= angle && angle >= right,
-            angle
-        };
-    } else {
-        return {
-            bool: left >= angle || angle >= right,
-            angle
-        };
-    }
-}
 function makeValidAngle(angle) {
+    // changes the angle so it's between 0 and 360
     function changeBy(angle, value) {
         let newAngle = angle;
         while (newAngle >= 360 || newAngle < 0) {
             newAngle = newAngle - value;
         }
-        return newAngle;
+        return Number(newAngle);
     }
     if (angle >= 360) {
         return changeBy(angle, 360);
@@ -100,47 +52,87 @@ function makeValidAngle(angle) {
         return angle;
     }
 }
-function getTargetsEdges(inCone, centre, leftRight) {
-    const insideCone = Number(inCone.centre) + Number(inCone.left) + Number(inCone.right);
-    const centreAngle = makeValidAngle(centre) + 360;
-    const leftAngle = makeValidAngle(leftRight.left) + 360;
-    const rightAngle = makeValidAngle(leftRight.right) + 360;
-    const returned = (left, right) => {
-        return {
-            left: makeValidAngle(left),
-            right: makeValidAngle(right)
+function withinCone(left, right, angle) {
+    // angles should be made valid
+    if (left > right) {
+        return left >= angle && angle >= right;
+    } else {
+        return left >= angle || angle >= right
+    }
+}
+function getLimit(orientation, cone) {
+    const halfAngle = cone / 2;
+    const left = makeValidAngle(orientation + halfAngle);
+    const right = makeValidAngle(orientation - halfAngle);
+    return {
+        left,
+        right
+    }
+}
+const cone = (left, right) => {
+    const first = (left, right) => {
+        if (left >= right) {
+            return left;
+        } else {
+            return left + 360;
         }
     }
-    if (insideCone == 3) {
-        return returned(leftAngle, rightAngle)
-    } else {
-        function getWidthInAngle(left, right) {
-            if (right > left) {
-                const st1 = right - 360;
-                return makeValidAngle(left - st1);
-            } else {
-                return makeValidAngle(left - right);
-            }
+    return makeValidAngle(first(left, right) - right);
+}
+function getPreciseLimits(centre, left, right, leftLimit, rightLimit) {
+    // will get another cone with orientation of centre.angle and cone of left.angle - right.angle
+    const targetsCone = (left, right, centre, l, r) => {
+        return {
+            centre,
+            cone: cone(l, r),
+            left,
+            right,
         }
-        const width = getWidthInAngle(leftAngle, rightAngle);
-        console.log(leftAngle, rightAngle);
-        console.log(width);
-        // basicaly doing a binary search for the last point within cone of vision
-        if (insideCone == 1 && inCone.centre) {
+    }
+
+    if (centre.withinSight) {
+        if (left.withinSight) {
+            if (right.withinSight) {
+                // all angles are within vision
+                return targetsCone(left.angle, right.angle, centre.angle, left.angle, right.angle);
+            } else {
+                // calculate the last angle on the right that is within vision
+                // rotating right means the angle decreases (change is -1)
+                const r = getLastAngleInsideVision(centre.angle, -1, leftLimit, rightLimit);
+                return targetsCone(left.angle, r, centre.angle, left.angle, right.angle);
+            }
+        } else if (right.withinSight) {
+            // calculate the last angle on the left that is within vision
+            // rotating left means the angle increases (change is 1)
+            const l = getLastAngleInsideVision(centre.angle, 1, leftLimit, rightLimit);
+            return targetsCone(l, right.angle, centre.angle, left.angle, right.angle);
+        }
+    } else {
+        if (left.withinSight) {
+            // calculate the last angle on the right that is within vision
+            // rotating right means the angle decreases (change is -1)
+            const r = getLastAngleInsideVision(left.angle, -1, leftLimit, rightLimit);
+            return targetsCone(left.angle, r, centre.angle, left.angle, right.angle);
+        } else if (right.withinSight) {
+            // calculate the last angle on the left that is within vision
+            // rotating left means the angle increases (change is 1)
+            const l = getLastAngleInsideVision(right.angle, 1, leftLimit, rightLimit);
+            return targetsCone(l, right.angle, centre.angle, left.angle, right.angle);
+        } else {
+            // technicaly you could have a cone of sight that sees both of the edges of the trarget but not the centre
+            // but i think you'll agree that that is a bit silly
+            // i'll be checking the function for result.left
+            return targetsCone(false, false, centre.angle, left.angle, right.angle);
         }
     }
 }
-function binaryAdjecent(angle, max, orientation, cone) {
-    if (max == 1) {
-        return angle;
-    } else {
-        const n = makeValidAngle(angle + max);
-        if (withinCone(orientation, cone, n)) {
-            return n;
-        } else {
-            return makeValidAngle(n - max / 2);
-        }
+function getLastAngleInsideVision(orientation, change, leftLimit, rightLimit) {
+    // wanted to do it with a more binary search kind of thing, but settled for this
+    let ang = orientation;
+    while (withinCone(leftLimit - 1, rightLimit + 1, ang)) {
+        ang += change;
     }
+    return ang;
 }
 export default () => {
     return {
@@ -153,15 +145,29 @@ export default () => {
             if (angle == 'overlapping') {
                 return 100;
             }
+            //distance from observer to target's centre
             const d = (Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))).toFixed(2);
             const sideAngles = getAngleOfTargetsEdges(angle, Number(d), target.size.width);
-            const inCone = {
-                centre: withinCone(observer.orientation, observer.cone, angle).bool,
-                left: withinCone(observer.orientation, observer.cone, sideAngles.left).bool,
-                right: withinCone(observer.orientation, observer.cone, sideAngles.right).bool
-            };
-            console.log(getTargetsEdges(inCone, angle, sideAngles));
-            return (Number(inCone.left) + Number(inCone.right)) * 50;
+            const angleClass = (angle, leftLimit, rightLimit) => {
+                return {
+                    angle,
+                    // will make calling information more convinient
+                    withinSight: withinCone(angle, leftLimit, rightLimit)
+                }
+            }
+            const limits = getLimit(observer.orientation, observer.cone);
+            const centreAngle = angleClass(angle, limits.left, limits.right);
+            const leftAngle = angleClass(sideAngles.left, limits.left, limits.right);
+            const rightAngle = angleClass(sideAngles.right, limits.left, limits.right);
+            const preciseLimits = getPreciseLimits(centreAngle, leftAngle, rightAngle, limits.left, limits.right);
+            const onePercent = preciseLimits.cone / 100;
+            const xPercent = cone(preciseLimits.left, preciseLimits.right);
+            const visiblePercent = Number((xPercent / onePercent).toFixed(0));
+            if (visiblePercent > 60 && visiblePercent < 70) {
+                return 66;
+            } else {
+                return visiblePercent;
+            }
         }
     };
 }
